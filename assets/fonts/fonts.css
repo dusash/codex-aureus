@@ -1,0 +1,68 @@
+/* ============================================================
+   Codex Aureus — 本地字体表（Google Fonts, OFL 授权, latin 子集）
+   全部离线可用，直接 file:// 打开亦可加载
+   ============================================================ */
+
+/* Cinzel Decorative —— 雕版罗马大写（标题 / 首字 / 铭牌） */
+@font-face {
+  font-family: 'Cinzel Decorative';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./cinzel-decorative-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cinzel Decorative';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./cinzel-decorative-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cinzel Decorative';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('./cinzel-decorative-900.woff2') format('woff2');
+}
+
+/* EB Garamond —— 正文衬线（可变字重 400–700） */
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./eb-garamond-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./eb-garamond-400-i.woff2') format('woff2');
+}
+
+/* Cormorant Garamond —— 副标题 / 引文 */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./cormorant-garamond-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./cormorant-garamond-400-i.woff2') format('woff2');
+}
+
+/* MedievalSharp —— 手抄本笔迹感（首字 / 旁注） */
+@font-face {
+  font-family: 'MedievalSharp';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./medievalsharp-400.woff2') format('woff2');
+}
