@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Codex Aureus · 黄金古卷 —— 中世纪泥金手抄本风格的艺术站点，纯静态、可离线打开。">
+<title>Codex Aureus · 黄金古卷 — 泥金手抄本</title>
+
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%232a1d12'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23d9b45c' font-family='serif'%3E%E2%9C%A0%3C/text%3E%3C/svg%3E">
+
+<style>
+/* =========================================================================
+   0. 变量与基调
+   ========================================================================= */
+:root{
+  --parch-1:#f0e3c6;
+  --parch-2:#e2d0aa;
+  --parch-3:#cbb488;
+  --ink:#2b2118;
+  --ink-soft:#4e4034;
+  --rubric:#8c2216;          /* 朱砂红 — 中世纪「红字标题」 */
+  --rubric-dk:#6a170e;
+  --lapis:#22406e;           /* 青金石蓝 */
+  --lapis-dk:#16294a;
+  --gold:#b98a2e;
+  --gold-lt:#e8ca77;
+  --gold-dk:#8a641b;
+  --shadow:rgba(48,33,18,.45);
+
+  --f-title:'Cinzel Decorative','Songti SC','STSong',serif;
+  --f-body:'EB Garamond','Songti SC','STSong','SimSun',serif;
+  --f-quote:'Cormorant Garamond','Kaiti SC','KaiTi',serif;
+  --f-hand:'MedievalSharp','Kaiti SC','KaiTi',cursive;
+
+  --sheet-w:1040px;
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+
+html{scroll-behavior:smooth;}
+
+body{
+  margin:0;
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:17px;
+  line-height:1.95;
+  background-color:#0b0806;
+  background-image:
+    radial-gradient(ellipse 90% 60% at 50% -10%, #2a1c12 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 110%, #241609 0%, transparent 55%),
+    repeating-linear-gradient(43deg, #100c09 0 3px, #0a0705 3px 9px);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* 全页纸纹颗粒（叠在最上层但不吃事件） */
+body::after{
+  content:"";position:fixed;inset:0;z-index:900;pointer-events:none;
+  opacity:.16;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+}
+
+/* =========================================================================
+   1. 阅读进度（金线）
+   ========================================================================= */
+.progress{
+  position:fixed;top:0;left:0;height:3px;width:0%;z-index:1000;
+  background:linear-gradient(90deg,var(--gold-dk),var(--gold-lt),var(--gold));
+  box-shadow:0 0 10px rgba(232,202,119,.8);
+  transition:width .12s linear;
+}
+
+/* =========================================================================
+   2. 顶部礼器条（音律 / 烛光）
+   ========================================================================= */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:950;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:10px clamp(14px,4vw,40px);
+  font-family:var(--f-title);font-size:.72rem;letter-spacing:.28em;text-transform:uppercase;
+  color:#c9a558;
+  background:linear-gradient(180deg,rgba(10,7,5,.92),rgba(10,7,5,0));
+  pointer-events:none;
+}
+.topbar > *{pointer-events:auto;}
+.topbar .mark{opacity:.85;white-space:nowrap;}
+.tools{display:flex;gap:10px;}
+.tool{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:7px 14px;border-radius:999px;cursor:pointer;
+  color:#d7b46a;background:rgba(35,24,14,.6);
+  border:1px solid rgba(185,138,46,.42);
+  font-family:var(--f-title);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;
+  backdrop-filter:blur(6px);transition:.3s;
+}
+.tool:hover{border-color:var(--gold-lt);color:#f3dda4;background:rgba(58,39,20,.75);}
+.tool .dot{width:7px;height:7px;border-radius:50%;background:#5b4526;transition:.3s;box-shadow:inset 0 0 3px #000;}
+.tool.on .dot{background:#e8ca77;box-shadow:0 0 8px #e8ca77,0 0 16px rgba(232,202,119,.6);}
+.tool.on{color:#f6e5b4;border-color:rgba(232,202,119,.75);}
+
+/* =========================================================================
+   3. 卷首插页 HERO
+   ========================================================================= */
+.hero{
+  position:relative;min-height:100svh;
+  display:flex;align-items:center;justify-content:center;
+  padding:110px 22px 90px;
+  overflow:hidden;
+}
+.hero__bg{
+  position:absolute;inset:0;
+  background-image:url("assets/img/blackletter.jpg");
+  background-size:cover;background-position:center;
+  filter:sepia(.55) contrast(.95) brightness(.42) saturate(.75);
+  transform:scale(1.06);
+  animation:slowzoom 38s ease-in-out infinite alternate;
+}
+@keyframes slowzoom{from{transform:scale(1.06) translateY(0)}to{transform:scale(1.14) translateY(-14px)}}
+.hero__veil{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 55% 45% at 50% 44%, rgba(232,202,119,.20), transparent 70%),
+    radial-gradient(ellipse 100% 100% at 50% 50%, transparent 30%, rgba(6,4,3,.92) 88%);
+}
+
+/* 卷首羊皮纸 */
+.incipit{
+  position:relative;z-index:2;
+  width:min(760px,100%);min-width:0;
+  padding:clamp(34px,6vw,62px) clamp(24px,5vw,64px) clamp(40px,6vw,56px);
+  text-align:center;
+  background-color:var(--parch-1);
+  background-image:
+    linear-gradient(180deg, rgba(253,248,234,.34), rgba(253,248,234,.16)),
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,248,225,.55), transparent 62%),
+    radial-gradient(circle at 8% 96%, rgba(120,84,40,.18), transparent 42%),
+    radial-gradient(circle at 94% 92%, rgba(120,84,40,.20), transparent 42%),
+    url("assets/img/parchment.jpg");
+  background-size:auto,auto,auto,auto,cover;
+  background-position:center;
+  box-shadow:
+    0 40px 90px -20px rgba(0,0,0,.95),
+    0 0 0 1px rgba(0,0,0,.4),
+    inset 0 0 90px rgba(96,66,32,.30);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%);
+  animation:risein 1.5s cubic-bezier(.19,1,.22,1) both;
+}
+@keyframes risein{from{opacity:0;transform:translateY(34px) scale(.985)}to{opacity:1;transform:none}}
+
+.incipit__frame{
+  position:absolute;inset:14px;pointer-events:none;
+  border:2px solid var(--gold-dk);
+  box-shadow:inset 0 0 0 4px var(--parch-1), inset 0 0 0 5px rgba(185,138,46,.55);
+}
+.incipit__frame::before{
+  content:"";position:absolute;inset:9px;border:1px solid rgba(138,100,27,.55);
+}
+
+.corner{position:absolute;width:64px;height:64px;color:var(--gold);opacity:.95;}
+.corner svg{width:100%;height:100%;display:block;filter:drop-shadow(0 1px 0 rgba(255,246,214,.5));}
+.corner--tl{top:-10px;left:-10px;}
+.corner--tr{top:-10px;right:-10px;transform:scaleX(-1);}
+.corner--bl{bottom:-10px;left:-10px;transform:scaleY(-1);}
+.corner--br{bottom:-10px;right:-10px;transform:scale(-1,-1);}
+
+.motto{
+  font-family:var(--f-title);font-size:.68rem;letter-spacing:.46em;
+  text-transform:uppercase;color:var(--rubric);margin:0 0 20px;
+}
+.motto small{display:block;letter-spacing:.3em;color:var(--gold-dk);margin-top:6px;font-size:.62rem;}
+
+.hero h1{
+  font-family:var(--f-title);font-weight:900;
+  font-size:clamp(2.35rem,8.4vw,4.6rem);
+  line-height:1.02;margin:6px 0 4px;letter-spacing:.04em;
+}
+/* 金箔文字：金属渐变 × 真实金箔拓印 × 缓慢扫光 */
+.foil{
+  background-image:
+    linear-gradient(112deg, rgba(255,255,255,0) 30%, rgba(255,253,235,.85) 44%, rgba(255,255,255,.08) 54%, rgba(255,255,255,0) 70%),
+    linear-gradient(166deg, #fdf3c4 0%, #e8c874 20%, #a97e22 44%, #f6e6a8 58%, #c99a33 78%, #7d5a15 100%),
+    url("assets/img/goldleaf-bright.jpg");
+  background-size:280% 100%, 100% 100%, cover;
+  background-position:-130% center, center, center;
+  background-blend-mode:screen, normal, normal;
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 1px 0 rgba(58,34,6,.95)) drop-shadow(0 4px 9px rgba(0,0,0,.6));
+  animation:foilsweep 7.5s ease-in-out infinite;
+}
+@keyframes foilsweep{
+  0%,62%{background-position:-130% center,center,center}
+  100%{background-position:230% center,center,center}
+}
+.hero h1 .zh{
+  display:block;font-family:var(--f-hand);font-weight:400;
+  font-size:.36em;letter-spacing:.5em;margin-top:14px;
+  color:var(--ink-soft);-webkit-text-fill-color:var(--ink-soft);
+  background:none;filter:none;animation:none;
+}
+
+.rule{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  margin:22px auto;max-width:360px;color:var(--gold);
+}
+.rule::before,.rule::after{
+  content:"";flex:1;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dk),transparent);
+}
+
+.hero__lede{
+  font-family:var(--f-quote);font-style:italic;
+  font-size:clamp(1rem,1.5vw,1.12rem);color:var(--ink-soft);
+  max-width:44ch;margin:0 auto;
+}
+.hero__meta{
+  margin-top:26px;font-family:var(--f-title);font-size:.64rem;
+  letter-spacing:.36em;text-transform:uppercase;color:var(--gold-dk);
+}
+
+.scrollcue{
+  position:absolute;bottom:26px;left:50%;transform:translateX(-50%);
+  z-index:3;color:#c9a558;font-family:var(--f-title);font-size:.6rem;
+  letter-spacing:.34em;text-transform:uppercase;text-align:center;
+}
+.scrollcue span{display:block;font-size:1.3rem;animation:bob 2.2s ease-in-out infinite;margin-top:2px;}
+@keyframes bob{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(7px);opacity:1}}
+
+/* =========================================================================
+   4. 手抄本主卷
+   ========================================================================= */
+.wrap{max-width:var(--sheet-w);margin:0 auto;padding:0 clamp(12px,3vw,26px);}
+
+.sheet{
+  position:relative;
+  margin:0 auto;
+  padding:clamp(28px,5vw,58px);
+  background-color:var(--parch-1);
+  /* 无缝纸纹平铺 + CSS 渐变做大面积做旧（避免平铺放大后失真） */
+  background-image:
+    radial-gradient(ellipse 78% 46% at 50% -4%, rgba(255,251,236,.60), transparent 62%),
+    radial-gradient(circle at 2% 100%, rgba(118,80,36,.26), transparent 44%),
+    radial-gradient(circle at 99% 4%, rgba(118,80,36,.22), transparent 42%),
+    radial-gradient(circle at 88% 88%, rgba(118,80,36,.14), transparent 34%),
+    linear-gradient(180deg, rgba(255,250,235,.18), rgba(196,166,116,.16)),
+    url("assets/img/parchment-tile.jpg");
+  background-size:auto,auto,auto,auto,auto,560px 560px;
+  background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,repeat;
+  background-position:center;
+  box-shadow:
+    0 30px 70px -26px rgba(0,0,0,.9),
+    inset 0 0 130px rgba(96,66,32,.30);
+}
+.sheet + .sheet{margin-top:clamp(40px,7vw,90px);}
+
+.sheet__frame{
+  position:relative;
+  border:3px double var(--gold-dk);
+  padding:clamp(22px,4vw,42px);
+}
+.sheet__frame::before{
+  content:"";position:absolute;inset:7px;border:1px solid rgba(185,138,46,.5);pointer-events:none;
+}
+
+/* =========================================================================
+   5. 红字标题 / 正文 / 首字
+   ========================================================================= */
+.rubric{
+  font-family:var(--f-title);font-size:.74rem;letter-spacing:.4em;
+  text-transform:uppercase;color:var(--rubric);
+  display:flex;align-items:center;gap:12px;margin:0 0 6px;
+}
+.rubric::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(140,34,22,.5),transparent);}
+h2.chapter{
+  font-family:var(--f-title);font-weight:700;
+  font-size:clamp(1.5rem,3.6vw,2.25rem);line-height:1.25;
+  margin:0 0 4px;color:var(--ink);
+}
+.chapter-lat{
+  font-family:var(--f-quote);font-style:italic;color:var(--ink-soft);
+  font-size:.98rem;margin:0 0 26px;
+}
+
+.sheet p{margin:0 0 1.15em;text-align:justify;text-justify:inter-ideograph;}
+.sheet p.lead{font-size:1.1rem;}
+.drop-p{margin-bottom:1.1em;}
+.drop-p::after{content:"";display:table;clear:both;}
+
+/* 泥金首字（Illuminated Initial） */
+/* 泥金首字（Illuminated Initial）：青金石蓝底 + 金箔字母 + 金红卷草 */
+.dropcap{
+  float:left;position:relative;
+  width:118px;height:138px;margin:10px 24px 8px 0;
+  background-color:#1b3057;
+  background-image:
+    radial-gradient(circle at 28% 22%, rgba(126,176,238,.38), transparent 56%),
+    radial-gradient(circle at 76% 82%, rgba(0,0,0,.55), transparent 62%),
+    linear-gradient(158deg,#34598e 0%,#1d3562 46%,#0f1d38 100%);
+  border:2px solid var(--gold);
+  outline:1px solid var(--gold-dk);
+  outline-offset:3px;
+  box-shadow:
+    5px 5px 0 rgba(74,50,22,.42),
+    0 12px 22px -10px rgba(40,24,6,.75),
+    inset 0 0 0 1px rgba(240,217,140,.5),
+    inset 0 0 34px rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;
+  flex:0 0 auto;
+}
+.dropcap b{
+  font-family:var(--f-title);font-weight:900;font-size:4.6rem;line-height:1;
+  background-image:linear-gradient(168deg,#fdf3c4 0%,#e8c874 32%,#a97e22 62%,#f4e2a4 100%);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 0 rgba(6,10,20,.7)) drop-shadow(0 0 7px rgba(240,217,140,.4));
+  transform:translateY(-3px);
+  position:relative;z-index:2;
+}
+.dropcap svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+
+/* 侧注 / 旁注 */
+.marginalia{
+  position:relative;
+  margin:26px 0 30px;padding:16px 20px 16px 52px;
+  font-family:var(--f-quote);font-style:italic;font-size:.98rem;
+  color:#5a4835;background:rgba(255,251,238,.42);
+  border-left:2px solid var(--gold);
+}
+.marginalia::before{
+  content:"☞";position:absolute;left:18px;top:14px;font-size:1.25rem;color:var(--rubric);
+  font-style:normal;
+}
+.marginalia cite{display:block;font-style:normal;font-size:.8rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gold-dk);margin-top:8px;font-family:var(--f-title);}
+
+/* 双栏正文（宽屏） */
+.cols2{columns:2;column-gap:44px;column-rule:1px solid rgba(138,100,27,.35);}
+@media (max-width:760px){.cols2{columns:1;column-rule:none;}}
+
+/* 拉丁引句 */
+.verse{
+  margin:34px 0;padding:24px 26px;text-align:center;
+  background:rgba(255,252,240,.4);
+  border-top:1px solid rgba(138,100,27,.5);
+  border-bottom:1px solid rgba(138,100,27,.5);
+  position:relative;
+}
+.verse::before,.verse::after{
+  content:"❧";position:absolute;left:50%;transform:translateX(-50%);
+  color:var(--gold);font-size:.95rem;background:var(--parch-1);padding:0 8px;line-height:1;
+}
+.verse::before{top:-9px;} .verse::after{bottom:-9px;}
+.verse .lat{
+  font-family:var(--f-quote);font-style:italic;font-size:1.22rem;
+  color:var(--rubric-dk);display:block;
+}
+.verse .zh{font-size:.95rem;color:var(--ink-soft);display:block;margin-top:6px;}
+
+/* =========================================================================
+   6. 目次导航
+   ========================================================================= */
+.tabula{margin:0 0 34px;padding-bottom:22px;border-bottom:1px solid rgba(138,100,27,.4);}
+.tabula ul{list-style:none;display:flex;flex-wrap:wrap;gap:10px 26px;justify-content:center;margin:0;padding:0;}
+.tabula a{
+  position:relative;text-decoration:none;color:var(--ink);
+  font-family:var(--f-title);font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;
+  padding-bottom:8px;transition:color .3s;
+}
+.tabula a i{font-style:normal;color:var(--gold-dk);margin-right:7px;font-size:.72rem;}
+.tabula a::after{
+  content:"❧";position:absolute;left:50%;bottom:-4px;transform:translateX(-50%) scale(.6);
+  color:var(--rubric);opacity:0;transition:.3s;font-size:.72rem;
+}
+.tabula a:hover{color:var(--rubric);}
+.tabula a:hover::after{opacity:1;transform:translateX(-50%) scale(1);}
+
+/* =========================================================================
+   7. 哥特尖拱卡片
+   ========================================================================= */
+.relics{
+  display:grid;gap:clamp(18px,2.6vw,30px);
+  grid-template-columns:repeat(auto-fit,minmax(238px,1fr));
+  margin:8px 0 10px;
+}
+.relic{
+  filter:drop-shadow(0 20px 26px rgba(52,34,14,.42));
+  transition:transform .5s cubic-bezier(.2,.8,.25,1), filter .5s;
+}
+.relic:hover{transform:translateY(-8px);filter:drop-shadow(0 32px 34px rgba(52,34,14,.55));}
+
+.relic__inner{
+  position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#f8f0da,#eadcbb 58%,#dcc79e);
+  /* 哥特尖拱：viewBox 比例按卡片实际长宽比设定，避免纵向拉伸成「箭头」 */
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 164' preserveAspectRatio='none'%3E%3Cpath d='M0,86.6 A100,100 0 0 1 50,0 A100,100 0 0 1 100,86.6 L100,164 L0,164 Z' fill='%23000'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 164' preserveAspectRatio='none'%3E%3Cpath d='M0,86.6 A100,100 0 0 1 50,0 A100,100 0 0 1 100,86.6 L100,164 L0,164 Z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  display:flex;flex-direction:column;
+  min-height:100%;
+}
+.relic__photo{
+  position:relative;height:212px;flex:0 0 auto;overflow:hidden;
+  background:#3a2a18;
+}
+.relic__photo img{
+  width:100%;height:100%;object-fit:cover;display:block;
+  filter:sepia(.26) contrast(1.02) brightness(1.02) saturate(.85);
+  transition:transform .8s cubic-bezier(.2,.8,.25,1), filter .6s;
+}
+.relic:hover .relic__photo img{transform:scale(1.06);filter:sepia(.10) contrast(1.06) brightness(1.08) saturate(1);}
+.relic__photo::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgba(232,202,119,.5);
+  /* 顶部压暗 + 底部渐隐进纸面，避免照片与卡片之间出现硬边 */
+  background:linear-gradient(180deg,
+    rgba(70,46,18,.32) 0%, transparent 38%,
+    rgba(228,208,170,.14) 80%, rgba(244,236,216,.62) 100%);
+}
+.relic__body{padding:16px 18px 26px;text-align:center;flex:1 1 auto;}
+.relic__num{
+  font-family:var(--f-title);font-size:.68rem;letter-spacing:.32em;
+  color:var(--gold-dk);display:block;margin-bottom:6px;
+}
+.relic__body h3{
+  font-family:var(--f-title);font-weight:700;font-size:1.12rem;
+  color:var(--rubric-dk);margin:0 0 3px;
+}
+.relic__body .lat{
+  font-family:var(--f-quote);font-style:italic;font-size:.88rem;
+  color:var(--ink-soft);display:block;margin-bottom:10px;
+}
+.relic__body p{margin:0;font-size:.94rem;line-height:1.8;color:#4a3c2c;text-align:center;}
+
+/* =========================================================================
+   8. 纪年表
+   ========================================================================= */
+.chronicle{list-style:none;margin:14px 0 0;padding:0 0 0 34px;position:relative;}
+.chronicle::before{
+  content:"";position:absolute;left:9px;top:8px;bottom:8px;width:2px;
+  background:linear-gradient(180deg,transparent,var(--gold) 8%,var(--gold-dk) 92%,transparent);
+}
+.chronicle li{
+  position:relative;padding:0 0 26px;
+}
+.chronicle li::before{
+  content:"";position:absolute;left:-33px;top:9px;width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle at 34% 32%,#c8402d,#6d1409);
+  box-shadow:0 0 0 3px rgba(185,138,46,.32), inset 0 -1px 2px rgba(0,0,0,.6);
+}
+.chronicle .yr{
+  font-family:var(--f-title);font-size:.86rem;letter-spacing:.2em;
+  color:var(--rubric-dk);display:block;margin-bottom:2px;
+}
+.chronicle strong{font-weight:600;color:var(--ink);}
+.chronicle p{margin:2px 0 0;font-size:.96rem;color:#4f4234;}
+
+/* =========================================================================
+   9. 缮写室横向书带
+   ========================================================================= */
+.band{
+  position:relative;margin:clamp(40px,7vw,86px) 0;padding:clamp(52px,9vw,110px) 22px;
+  background:#0d0906;overflow:hidden;
+}
+.band::before{
+  content:"";position:absolute;inset:0;z-index:0;
+  background-image:url("assets/img/blackletter.jpg");
+  background-size:cover;background-position:center;
+  filter:sepia(.5) brightness(.52) contrast(1.02);
+  transform:translate3d(0,var(--py,0px),0) scale(1.18);
+  will-change:transform;
+}
+.band::after{
+  content:"";position:absolute;inset:0;z-index:1;
+  background:radial-gradient(ellipse 62% 62% at 50% 50%, transparent, rgba(8,5,3,.82) 86%);
+}
+.band__inner{
+  position:relative;z-index:2;max-width:820px;margin:0 auto;text-align:center;
+}
+.band blockquote{
+  margin:0;font-family:var(--f-quote);font-style:italic;
+  font-size:clamp(1.35rem,4vw,2.1rem);line-height:1.5;color:#f6e3b3;
+  text-shadow:0 2px 18px rgba(0,0,0,.9);
+}
+.band cite{
+  display:block;margin-top:18px;font-style:normal;font-family:var(--f-title);
+  font-size:.68rem;letter-spacing:.36em;text-transform:uppercase;color:#d0a951;
+}
+
+/* =========================================================================
+   10. 书末题记 + 火漆印章
+   ========================================================================= */
+.colophon{
+  display:grid;gap:clamp(24px,4vw,44px);
+  grid-template-columns:minmax(0,1.35fr) minmax(0,.9fr);
+  align-items:start;
+}
+@media (max-width:760px){.colophon{grid-template-columns:1fr;}}
+
+/* 火漆封印：一张毛边羊皮纸便条 + 蜡印 */
+.seal-wrap{filter:drop-shadow(0 16px 26px rgba(30,18,6,.55));}
+.seal-block{
+  position:relative;text-align:center;
+  padding:38px 26px 34px;
+  min-height:300px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background-color:var(--parch-1);
+  background-image:
+    radial-gradient(circle at 26% 22%, rgba(255,250,232,.7), transparent 55%),
+    radial-gradient(circle at 78% 84%, rgba(118,80,36,.24), transparent 52%),
+    url("assets/img/parchment-tile.jpg");
+  background-size:auto,auto,420px 420px;
+  background-repeat:no-repeat,no-repeat,repeat;
+  /* 手撕毛边（48 点不规则轮廓） */
+  -webkit-clip-path:polygon(0% 3.9%, 6.7% 5.8%, 13.3% 5.6%, 20% 2.7%, 26.7% 4.5%, 33.3% 3.9%, 40% 4.3%, 46.7% 2.9%, 53.3% 3.1%, 60% 4%, 66.7% 3.2%, 73.3% 4%, 80% 2.5%, 86.7% 2.7%, 93.3% 5%, 100% 2.1%, 97.6% 11.1%, 98.6% 22.2%, 96.9% 33.3%, 95.5% 44.4%, 98.8% 55.6%, 97.9% 66.7%, 98.2% 77.8%, 98.1% 88.9%, 99.4% 100%, 93.3% 96.4%, 86.7% 95%, 80% 96.3%, 73.3% 95.7%, 66.7% 95.4%, 60% 96.5%, 53.3% 97.3%, 46.7% 96%, 40% 95.2%, 33.3% 95.6%, 26.7% 96.1%, 20% 95.4%, 13.3% 97%, 6.7% 97%, 0% 98.3%, 4% 88.9%, 1.1% 77.8%, .7% 66.7%, .7% 55.6%, .6% 44.4%, 1.5% 33.3%, 2.8% 22.2%, 4% 11.1%);
+  clip-path:polygon(0% 3.9%, 6.7% 5.8%, 13.3% 5.6%, 20% 2.7%, 26.7% 4.5%, 33.3% 3.9%, 40% 4.3%, 46.7% 2.9%, 53.3% 3.1%, 60% 4%, 66.7% 3.2%, 73.3% 4%, 80% 2.5%, 86.7% 2.7%, 93.3% 5%, 100% 2.1%, 97.6% 11.1%, 98.6% 22.2%, 96.9% 33.3%, 95.5% 44.4%, 98.8% 55.6%, 97.9% 66.7%, 98.2% 77.8%, 98.1% 88.9%, 99.4% 100%, 93.3% 96.4%, 86.7% 95%, 80% 96.3%, 73.3% 95.7%, 66.7% 95.4%, 60% 96.5%, 53.3% 97.3%, 46.7% 96%, 40% 95.2%, 33.3% 95.6%, 26.7% 96.1%, 20% 95.4%, 13.3% 97%, 6.7% 97%, 0% 98.3%, 4% 88.9%, 1.1% 77.8%, .7% 66.7%, .7% 55.6%, .6% 44.4%, 1.5% 33.3%, 2.8% 22.2%, 4% 11.1%);
+  transform:rotate(-1.1deg);
+}
+
+.seal{
+  --s:128px;width:var(--s);height:var(--s);
+  border-radius:50%;
+  position:relative;cursor:pointer;border:0;padding:0;background:transparent;
+  transition:transform .25s cubic-bezier(.2,.8,.25,1), filter .3s;
+  filter:drop-shadow(0 9px 13px rgba(0,0,0,.55));
+}
+.seal__wax{
+  position:absolute;inset:0;
+  background-color:#8e1c10;
+  background-image:
+    radial-gradient(circle at 32% 26%, rgba(255,216,190,.52) 0%, rgba(232,124,92,.14) 17%, transparent 36%),
+    radial-gradient(circle at 72% 80%, rgba(40,4,3,.5) 0%, transparent 54%),
+    radial-gradient(circle at 50% 46%, #b8331f 0%, #97200f 42%, #74150c 70%, #4d0a07 100%);
+  box-shadow:
+    inset 3px 4px 10px rgba(255,196,166,.24),
+    inset -7px -8px 16px rgba(0,0,0,.62);
+  /* 32 点不规则蜡边 */
+  -webkit-clip-path:polygon(95.9% 50%, 96.3% 59.2%, 95% 68.7%, 89.8% 76.6%, 82.6% 82.6%, 74.4% 86.4%, 66% 88.6%, 58.3% 91.8%, 50% 94.7%, 40.8% 96.1%, 31.9% 93.6%, 23.7% 89.3%, 17.4% 82.6%, 11.4% 75.8%, 7.4% 67.7%, 5.6% 58.8%, 4.1% 50%, 6.2% 41.3%, 10.1% 33.5%, 13.9% 25.9%, 18.5% 18.5%, 24% 11.1%, 31.2% 4.7%, 40.6% 2.9%, 50% 3.7%, 58.6% 6.7%, 66.4% 10.5%, 74.2% 13.7%, 81.5% 18.5%, 88% 24.6%, 91.9% 32.7%, 94.6% 41.1%);
+  clip-path:polygon(95.9% 50%, 96.3% 59.2%, 95% 68.7%, 89.8% 76.6%, 82.6% 82.6%, 74.4% 86.4%, 66% 88.6%, 58.3% 91.8%, 50% 94.7%, 40.8% 96.1%, 31.9% 93.6%, 23.7% 89.3%, 17.4% 82.6%, 11.4% 75.8%, 7.4% 67.7%, 5.6% 58.8%, 4.1% 50%, 6.2% 41.3%, 10.1% 33.5%, 13.9% 25.9%, 18.5% 18.5%, 24% 11.1%, 31.2% 4.7%, 40.6% 2.9%, 50% 3.7%, 58.6% 6.7%, 66.4% 10.5%, 74.2% 13.7%, 81.5% 18.5%, 88% 24.6%, 91.9% 32.7%, 94.6% 41.1%);
+  overflow:hidden;
+}
+/* 蜡面颗粒 */
+.seal__wax::before{
+  content:"";position:absolute;inset:-25%;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='4'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23w)' opacity='.5'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay;opacity:.6;
+}
+/* 压印内圈 */
+.seal__wax::after{
+  content:"";position:absolute;inset:15%;border-radius:50%;
+  border:3px solid rgba(46,4,3,.5);
+  box-shadow:inset 0 2px 3px rgba(255,180,150,.28), inset 0 -2px 4px rgba(0,0,0,.55),
+             0 1px 0 rgba(255,190,160,.22), 0 -1px 2px rgba(0,0,0,.5);
+}
+.seal__mark{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-title);font-weight:700;font-size:2.05rem;letter-spacing:-.04em;
+  color:#4a090b;
+  text-shadow:1.5px 1.5px 0 rgba(255,178,148,.24), -1.5px -1.5px 0 rgba(38,3,2,.75);
+  z-index:2;
+}
+.seal:hover{transform:translateY(-4px) rotate(-4deg) scale(1.03);}
+.seal:active,.seal.press{transform:translateY(3px) scale(.93) rotate(3deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));}
+
+/* 印章按下后留下的印记 */
+.seal-ghost{
+  position:absolute;width:108px;height:108px;border-radius:50%;
+  background:radial-gradient(circle at 36% 32%, rgba(200,64,45,.42), rgba(80,12,8,.3) 60%, transparent 72%);
+  mix-blend-mode:multiply;pointer-events:none;opacity:0;
+}
+.seal-ghost.show{animation:stamp .9s ease-out forwards;}
+@keyframes stamp{
+  0%{opacity:0;transform:scale(1.5) rotate(-14deg);}
+  22%{opacity:.95;transform:scale(.96) rotate(4deg);}
+  60%{opacity:.72;transform:scale(1) rotate(0);}
+  100%{opacity:0;transform:scale(1.02);}
+}
+
+.seal-hint{
+  font-family:var(--f-title);font-size:.6rem;letter-spacing:.28em;text-transform:uppercase;
+  color:#7a6440;margin:0;
+}
+
+/* 题记正文 */
+.colophon-main h2{margin-bottom:8px;}
+.spec{list-style:none;margin:18px 0 0;padding:0;font-size:.92rem;}
+.spec li{
+  display:flex;gap:12px;padding:8px 0;border-bottom:1px dotted rgba(138,100,27,.42);
+}
+.spec b{
+  flex:0 0 104px;font-family:var(--f-title);font-weight:400;font-size:.68rem;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dk);padding-top:3px;
+}
+.spec span{flex:1;color:#4a3c2c;}
+.spec a{color:var(--rubric);text-decoration:none;border-bottom:1px solid rgba(140,34,22,.32);}
+.spec a:hover{border-bottom-color:var(--rubric);}
+
+.foot{
+  text-align:center;padding:46px 22px 64px;color:#a98d55;
+  font-family:var(--f-title);font-size:.64rem;letter-spacing:.3em;text-transform:uppercase;
+}
+.foot .xi{display:block;font-size:1.7rem;color:#d0a951;margin-bottom:16px;
+  filter:drop-shadow(0 0 10px rgba(208,169,81,.5));}
+
+/* 书架：收束全篇的一张实拍古籍书脊 */
+.shelf{
+  position:relative;height:clamp(160px,21vw,250px);overflow:hidden;
+  background:#140d07;
+}
+.shelf::before{
+  content:"";position:absolute;inset:0;
+  background-image:url("assets/img/codex-spine.jpg");
+  background-size:cover;background-position:center 42%;
+  filter:sepia(.4) brightness(.92) contrast(1.04) saturate(.85);
+}
+.shelf::after{
+  content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(180deg, rgba(11,8,6,.99) 0%, rgba(11,8,6,.30) 26%, rgba(11,8,6,.24) 62%, rgba(11,8,6,.99) 100%),
+    radial-gradient(ellipse 74% 84% at 50% 50%, transparent, rgba(8,5,3,.72) 94%);
+}
+.shelf__cap{
+  position:absolute;left:50%;bottom:clamp(16px,3vw,30px);transform:translateX(-50%);
+  z-index:2;white-space:nowrap;
+  font-family:var(--f-title);font-size:.66rem;letter-spacing:.34em;text-transform:uppercase;
+  color:#e6c67d;text-shadow:0 2px 14px rgba(0,0,0,.98), 0 0 26px rgba(0,0,0,.9);
+}
+
+/* =========================================================================
+   11. 提示条（替代 alert）
+   ========================================================================= */
+.toast{
+  position:fixed;left:50%;bottom:34px;transform:translate(-50%,22px);
+  z-index:990;max-width:min(560px,90vw);
+  padding:16px 26px;text-align:center;
+  background-color:var(--parch-1);
+  background-image:url("assets/img/parchment.jpg");background-size:cover;
+  border:2px solid var(--gold-dk);
+  box-shadow:0 22px 50px rgba(0,0,0,.7), inset 0 0 40px rgba(150,110,50,.3);
+  font-family:var(--f-quote);font-style:italic;font-size:1.02rem;color:#4a2118;
+  opacity:0;pointer-events:none;transition:.5s cubic-bezier(.2,.8,.25,1);
+}
+.toast.show{opacity:1;transform:translate(-50%,0);}
+
+/* =========================================================================
+   12. 出场动画
+   ========================================================================= */
+/* 出场动画：仅在 JS 可用时才隐藏（html.rv 由脚本添加），
+   无 JS / 打印 / 减少动效时内容始终可见 */
+html.rv .reveal{opacity:0;transform:translateY(26px);
+  transition:opacity 1s ease,transform 1s cubic-bezier(.19,1,.22,1);}
+html.rv .reveal.in{opacity:1;transform:none;}
+
+/* =========================================================================
+   12b. 打印（Ctrl+P 可导出为一份古卷 PDF）
+   ========================================================================= */
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body{background:#fff;}
+  .topbar,.progress,.scrollcue,.candlefx,.toast,.band,.hero__bg,.hero__veil{display:none !important;}
+  .hero{min-height:auto;padding:24px;}
+  .sheet,.incipit{box-shadow:none;break-inside:avoid;}
+  .sheet + .sheet{margin-top:24px;}
+  .reveal{opacity:1 !important;transform:none !important;}
+}
+
+/* =========================================================================
+   13. 烛光模式
+   ========================================================================= */
+.candlefx{
+  position:fixed;inset:0;z-index:940;pointer-events:none;opacity:0;transition:opacity .9s;
+  background:radial-gradient(circle 62vmax at 50% 38%, rgba(255,196,102,.10) 0%, rgba(60,26,4,.42) 46%, rgba(6,3,1,.88) 100%);
+}
+body.candle .candlefx{opacity:1;animation:flicker 5.5s ease-in-out infinite;}
+@keyframes flicker{
+  0%,100%{filter:brightness(1)}
+  17%{filter:brightness(1.09)}
+  23%{filter:brightness(.95)}
+  41%{filter:brightness(1.06)}
+  58%{filter:brightness(.97)}
+  73%{filter:brightness(1.08)}
+}
+
+/* =========================================================================
+   14. 响应式
+   ========================================================================= */
+@media (max-width:640px){
+  body{font-size:16px;}
+  .hero{padding:88px 14px 74px;}
+  .incipit{clip-path:none;padding:30px 18px 36px;min-width:0;}
+  .incipit__frame{inset:10px;}
+  .corner{width:46px;height:46px;}
+  .corner--tl,.corner--tr{top:-7px;}
+  .corner--tr,.corner--br{right:-7px;}
+  .corner--tl,.corner--bl{left:-7px;}
+  .corner--bl,.corner--br{bottom:-7px;}
+  .hero h1{font-size:clamp(1.6rem,7.6vw,4.6rem);letter-spacing:.01em;}
+  .hero h1 .zh{letter-spacing:.32em;}
+  .dropcap{width:92px;height:110px;margin-right:16px;}
+  .dropcap b{font-size:3.3rem;}
+  .band::before{transform:none;}
+  .topbar{letter-spacing:.16em;padding:8px 14px;}
+  .topbar .mark{display:none;}
+  .tool{padding:6px 11px;font-size:.62rem;letter-spacing:.12em;}
+  .relic__photo{height:176px;}
+  .shelf__cap{white-space:normal;width:80%;text-align:center;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition-duration:.01ms !important;}
+  .reveal{opacity:1;transform:none;}
+  html{scroll-behavior:auto;}
+}
+/* 章节阅读层：无脚本时仍保留完整长卷 */
+:root{--turn-ease:cubic-bezier(.22,.61,.36,1);--nav-top:64px;}
+html{scroll-padding-top:150px;}
+button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--lapis);outline-offset:5px;}
+.hero{min-height:0;padding:86px 22px 28px;}
+.incipit{width:min(850px,100%);padding:30px 44px;animation:risein .55s var(--turn-ease) both;}
+.hero h1{font-size:clamp(1.8rem,5vw,3rem);}
+.hero h1 .zh{font-size:.4em;margin-top:10px;}
+.motto{margin-bottom:12px;}
+.rule{margin:12px auto;}
+.hero__lede{max-width:56ch;font-size:1rem;}
+.hero__meta{margin:12px 0 0;}
+.hero__bg,.foil{animation:none;}
+.scrollcue{display:none;}
+.topbar{background:#f1e5cc;border-bottom:1px solid #c5a66e;color:#65491e;min-height:58px;}
+.topbar .tool{background:#f8efd9;color:#65491e;backdrop-filter:none;min-height:40px;}
+.topbar .tool:hover,.topbar .tool.on{background:#e8d6af;color:#6a170e;border-color:#8a641b;}
+.topbar .tool .dot{box-shadow:none;background:#ac9875;}
+.topbar .tool.on .dot{background:#8c2216;box-shadow:0 0 0 3px #8c22161a;}
+body::after{position:absolute;opacity:.08;}
+.reader-nav{position:sticky;top:var(--nav-top);z-index:960;margin:0 0 18px;padding:8px;background:#f1e5cc;border:1px solid #b99b63;box-shadow:0 5px 16px #23140626;}
+.reader-nav ul{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+.reader-nav li{min-width:0;}
+.reader-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-height:58px;padding:6px 8px;letter-spacing:.1em;border:1px solid transparent;transition:background-color .2s,color .2s,transform .2s var(--turn-ease);}
+.reader-nav a small{font-family:var(--f-quote);font-size:.8rem;letter-spacing:.04em;}
+.reader-nav a::after{display:none;}
+.reader-nav a:hover{background:#e6d4ad;}
+.reader-nav a[aria-selected="true"]{background:#8c2216;color:#fff1d1;border-color:#6a170e;box-shadow:inset 0 0 0 2px #e8ca7740;}
+.reader-nav a:active,.folio-btn:active,.tool:active{transform:translateY(1px) scale(.98);}
+.reader .sheet{padding:clamp(16px,3vw,30px);margin:0;}
+.reader .sheet__frame{padding:clamp(20px,3vw,32px);}
+.reader .sheet[hidden]{display:none !important;}
+.reader .sheet{scroll-margin-top:150px;}
+.reader .chapter-lat{margin-bottom:18px;}
+.reader .cols2{columns:1;}
+.reader .band{margin:26px 0 0;padding:28px 22px;}
+.reader .band blockquote{font-size:1.2rem;}
+.reader .band::before{transform:none;will-change:auto;}
+.reader .shelf{height:120px;margin-top:24px;}
+.reader-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 0;}
+.reader-controls[hidden]{display:none;}
+.folio-btn{font-family:var(--f-body);font-size:.95rem;min-height:44px;padding:8px 18px;background:#efe1c2;color:#533b20;border:1px solid #b99b63;cursor:pointer;transition:background-color .2s,transform .2s var(--turn-ease);}
+.folio-btn:hover:not(:disabled){background:#f9edcf;}
+.folio-btn:disabled{opacity:.4;cursor:default;}
+.folio-count{color:#ead5a4;font-size:.9rem;text-align:center;}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+.foot{padding:16px 16px 28px;font-size:.6rem;}
+.foot .xi{display:none;}
+.tool{transition:background-color .2s,color .2s,border-color .2s,transform .2s var(--turn-ease);}
+.relic{transition:transform .24s var(--turn-ease);}
+.relic:hover{transform:translateY(-4px);filter:drop-shadow(0 20px 26px rgba(52,34,14,.42));}
+.relic__photo img{transition:transform .35s var(--turn-ease);}
+.relic:hover .relic__photo img{filter:sepia(.26) contrast(1.02) brightness(1.02) saturate(.85);transform:scale(1.035);}
+.relic-guide{display:none;}
+.reader .chronicle{display:grid;grid-template-columns:1fr 1fr;gap:14px 26px;}
+.reader .chronicle li{padding-bottom:12px;}
+.reader .chronicle::before{bottom:20px;}
+@media(max-width:760px){
+  :root{--nav-top:58px;}
+  .hero{padding:76px 12px 20px;}
+  .incipit{padding:26px 22px;}
+  .motto{font-size:.6rem;letter-spacing:.25em;}
+  .motto small{display:none;}
+  .hero h1{font-size:clamp(1.55rem,6.8vw,2.8rem);}
+  .hero__lede{font-size:.9rem;line-height:1.8;}
+  .hero__meta{font-size:.55rem;letter-spacing:.16em;}
+  .rule svg{width:23px;height:23px;}
+  .topbar{padding:7px 12px;gap:8px;}
+  .topbar .mark{display:none;}
+  .tools{width:100%;justify-content:flex-end;gap:8px;}
+  .topbar .tool{min-height:42px;font-size:.6rem;}
+  .reader-nav{padding:5px;margin-bottom:12px;}
+  .reader-nav a{padding:7px 2px;font-size:.8rem;letter-spacing:.02em;min-height:52px;}
+  .reader-nav a small{display:none;}
+  .reader .sheet{padding:12px;}
+  .reader .sheet__frame{padding:20px 15px;}
+  .reader .sheet p{line-height:1.85;}
+  .reader .sheet p.lead{font-size:1rem;}
+  .reader .chronicle{display:block;}
+  .reader .chronicle li{padding-bottom:20px;}
+  .reader .spec li{gap:10px;}
+  .reader .spec b{flex-basis:44px;}
+  .reader .marginalia{padding:14px 14px 14px 36px;font-size:.93rem;}
+  .reader .marginalia::before{left:10px;}
+  .reader .verse{padding:18px 12px;}
+  .reader .relics{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;gap:16px;padding:6px 4px 20px;scrollbar-width:thin;scrollbar-color:#b98a2e #e2d0aa;}
+  .reader .relic{flex:0 0 90%;min-width:0;scroll-snap-align:center;filter:none;}
+  .reader .relic:hover{transform:none;filter:none;}
+  .reader .relic__photo{height:200px;}
+  .relic-guide{display:block;font-size:.82rem !important;color:var(--ink-soft);margin:0 0 6px !important;}
+  .folio-btn{padding:8px 12px;font-size:.85rem;}
+  .folio-count{font-size:.8rem;}
+  .toast{bottom:20px;padding:12px 16px;font-size:.95rem;}
+  body.candle .candlefx{animation:none;}
+  .band::before{will-change:auto;}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto !important;}*{animation:none !important;transition:none !important;}}
+@media print{
+  .reader-nav,.reader-controls,.relic-guide{display:none !important;}
+  .reader .sheet[hidden],.reader .sheet{display:block !important;opacity:1 !important;transform:none !important;margin:20px 0;}
+  .reader .relics{display:grid;overflow:visible;}
+  .hero{padding:20px;}.reader .sheet{break-inside:auto;}
+}
+</style>
+</head>
+
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="candlefx" aria-hidden="true"></div>
+
+<!-- ============ 顶部礼器条 ============ -->
+<div class="topbar">
+  <span class="mark">Codex Aureus · Scriptorium</span>
+  <div class="tools">
+    <button class="tool" id="btnChant" aria-pressed="false" title="开启/关闭程序合成的圣咏氛围音">
+      <span class="dot"></span>圣咏 · CANTUS
+    </button>
+    <button class="tool" id="btnCandle" aria-pressed="false" title="烛光模式">
+      <span class="dot"></span>烛光 · LUMEN
+    </button>
+  </div>
+</div>
+
+<!-- ============ 卷首插页 ============ -->
+<header class="hero">
+  <div class="hero__bg" aria-hidden="true"></div>
+  <div class="hero__veil" aria-hidden="true"></div>
+
+  <div class="incipit">
+    <span class="incipit__frame" aria-hidden="true">
+      <i class="corner corner--tl">
+        <svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M3 69V22C3 11.5 11.5 3 22 3h47"/>
+          <path d="M13 69V27c0-7.7 6.3-14 14-14h43" stroke-width="1" stroke-opacity=".8"/>
+          <path d="M22 33c-6.5.4-10 4-10 8.6 0 3.6 2.6 5.6 5.4 4.6 2.6-1 3.6-3.6 2-5.5"/>
+          <path d="M39 21c-.4-6.5 3-10 7.6-10 3.6 0 5.6 2.6 4.6 5.4-1 2.6-3.6 3.6-5.5 2"/>
+          <circle cx="30.5" cy="30.5" r="2.6" stroke-width="1.2"/>
+          <path d="M30.5 23.5v14M23.5 30.5h14" stroke-width="1.2"/>
+        </svg>
+      </i>
+      <i class="corner corner--tr">
+        <svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M3 69V22C3 11.5 11.5 3 22 3h47"/>
+          <path d="M13 69V27c0-7.7 6.3-14 14-14h43" stroke-width="1" stroke-opacity=".8"/>
+          <path d="M22 33c-6.5.4-10 4-10 8.6 0 3.6 2.6 5.6 5.4 4.6 2.6-1 3.6-3.6 2-5.5"/>
+          <path d="M39 21c-.4-6.5 3-10 7.6-10 3.6 0 5.6 2.6 4.6 5.4-1 2.6-3.6 3.6-5.5 2"/>
+          <circle cx="30.5" cy="30.5" r="2.6" stroke-width="1.2"/>
+          <path d="M30.5 23.5v14M23.5 30.5h14" stroke-width="1.2"/>
+        </svg>
+      </i>
+      <i class="corner corner--bl">
+        <svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M3 69V22C3 11.5 11.5 3 22 3h47"/>
+          <path d="M13 69V27c0-7.7 6.3-14 14-14h43" stroke-width="1" stroke-opacity=".8"/>
+          <path d="M22 33c-6.5.4-10 4-10 8.6 0 3.6 2.6 5.6 5.4 4.6 2.6-1 3.6-3.6 2-5.5"/>
+          <path d="M39 21c-.4-6.5 3-10 7.6-10 3.6 0 5.6 2.6 4.6 5.4-1 2.6-3.6 3.6-5.5 2"/>
+          <circle cx="30.5" cy="30.5" r="2.6" stroke-width="1.2"/>
+          <path d="M30.5 23.5v14M23.5 30.5h14" stroke-width="1.2"/>
+        </svg>
+      </i>
+      <i class="corner corner--br">
+        <svg viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M3 69V22C3 11.5 11.5 3 22 3h47"/>
+          <path d="M13 69V27c0-7.7 6.3-14 14-14h43" stroke-width="1" stroke-opacity=".8"/>
+          <path d="M22 33c-6.5.4-10 4-10 8.6 0 3.6 2.6 5.6 5.4 4.6 2.6-1 3.6-3.6 2-5.5"/>
+          <path d="M39 21c-.4-6.5 3-10 7.6-10 3.6 0 5.6 2.6 4.6 5.4-1 2.6-3.6 3.6-5.5 2"/>
+          <circle cx="30.5" cy="30.5" r="2.6" stroke-width="1.2"/>
+          <path d="M30.5 23.5v14M23.5 30.5h14" stroke-width="1.2"/>
+        </svg>
+      </i>
+    </span>
+
+    <p class="motto">
+      Anno Domini MCCLIV
+      <small>真实之书 · 藏于无形之修院</small>
+    </p>
+
+    <h1>
+      <span class="foil">CODEX AUREUS</span>
+      <span class="zh">黄 金 古 卷</span>
+    </h1>
+
+    <div class="rule" aria-hidden="true">
+      <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 4.5v23M5 16h22"/>
+        <path d="M16 4.5l-3 4.2h6l-3-4.2zM16 27.5l-3-4.2h6l-3 4.2zM4.5 16l4.2-3v6l-4.2-3zM27.5 16l-4.2-3v6l4.2-3z"/>
+        <circle cx="16" cy="16" r="2.7"/>
+        <circle cx="16" cy="16" r=".95" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+
+    <p class="hero__lede">
+      羊皮纸的纹理里藏着一整个黑夜。当抄写员磨碎天青石与朱砂，
+      他用一生的手温，把光留在了纸上。
+    </p>
+
+    <p class="hero__meta">Incipit liber aureus · 泥金抄本 · 卷一</p>
+  </div>
+
+  <div class="scrollcue" aria-hidden="true">
+    卷下 · Deorsum
+    <span>❧</span>
+  </div>
+</header>
+
+<!-- ============ 主卷 ============ -->
+<main class="wrap reader" id="reader">
+  <nav class="tabula reader-nav" aria-label="古卷章节">
+    <ul>
+      <li><a id="tab-prologue" href="#prologue"><span>序章</span><small>I · Prologus</small></a></li>
+      <li><a id="tab-relics" href="#relics"><span>圣物</span><small>II · Reliquiae</small></a></li>
+      <li><a id="tab-chronicle" href="#chronicle"><span>纪年</span><small>III · Chronica</small></a></li>
+      <li><a id="tab-colophon" href="#colophon"><span>题记</span><small>IV · Colophon</small></a></li>
+    </ul>
+  </nav>
+
+  <!-- ---------- 序章 ---------- -->
+  <article class="sheet reveal" id="prologue">
+    <div class="sheet__frame">
+
+      <p class="rubric">Incipit prologus</p>
+      <h2 class="chapter">写在墨迹未干之时</h2>
+      <p class="chapter-lat">Quomodo tenebrae lumen in membranis servaverint.</p>
+
+      <p class="lead drop-p">
+        <span class="dropcap" aria-hidden="false">
+          <svg viewBox="0 0 118 138" preserveAspectRatio="none" aria-hidden="true">
+            <!-- 金色细框 -->
+            <rect x="8" y="8" width="102" height="122" fill="none"
+                  stroke="rgba(232,202,119,.55)" stroke-width="1"/>
+            <!-- 左上 / 右下 金红卷草 -->
+            <g fill="none" stroke="rgba(236,208,128,.9)" stroke-width="1.5" stroke-linecap="round">
+              <path d="M20 38c-5-7-2-15 5-17 6-2 10 3 8 8"/>
+              <path d="M40 20c-3-5-1-11 5-12 5-1 7 3 6 7"/>
+              <path d="M98 100c5 7 2 15-5 17-6 2-10-3-8-8"/>
+              <path d="M78 118c3 5 1 11-5 12-5 1-7-3-6-7"/>
+            </g>
+            <g fill="rgba(168,38,24,.85)">
+              <circle cx="26" cy="23" r="2.8"/>
+              <circle cx="92" cy="115" r="2.8"/>
+            </g>
+            <g fill="rgba(244,226,164,.9)">
+              <circle cx="16" cy="16" r="1.9"/>
+              <circle cx="102" cy="122" r="1.9"/>
+            </g>
+            <!-- 四角小十字 -->
+            <g stroke="rgba(232,202,119,.75)" stroke-width="1.1" stroke-linecap="round">
+              <path d="M13 9v6M10 12h6"/>
+              <path d="M105 129v-6M102 126h6"/>
+            </g>
+          </svg>
+          <b>I</b>
+        </span>
+        在墨水未干的静谧午夜，羊皮纸承载着繁星与玫瑰的奥秘。中世纪的匠人把小块的
+        天青石磨成粉，混上蛋清与阿拉伯胶，再以金箔覆在凸起的石膏底上——于是
+        一个字母就有了自己的光。他们不是在装饰文字，而是在为文字造一座可以进入的建筑。
+        每一道笔触都是对永恒的叩问，每一行经文都穿越了漫长的黑夜，静候后世灵魂前来解读。
+      </p>
+
+      <p>
+        翻开这卷古籍，时间的边界便隐入阴影。那些被遗忘的修道院钟声、泛黄地图边缘描绘的
+        深海巨兽，以及被火漆封存的誓约，都在这缕微弱的烛火下重新获得呼吸。
+      </p>
+
+      <aside class="marginalia">
+        抄写员常在页边写下与正文无关的心事。1423 年的一个边注里，有人抱怨墨太稀、
+        蜡烛太短、手指冻得握不住笔——然后继续抄完了整整一卷《诗篇》。
+        <cite>页边注 · Marginalia</cite>
+      </aside>
+
+      <div class="verse">
+        <span class="lat">«Littera occidit, spiritus autem vivificat.»</span>
+        <span class="zh">字句是叫人死，精意是叫人活。<span style="opacity:.65">— II Cor. 3:6</span></span>
+      </div>
+
+      <div class="cols2">
+        <p>
+          手抄本之珍贵，在于它无法被复制。每个抄写员的笔压、呼吸、体温都留在纸上；
+          一次走神会让某行字母微微倾倒，一滴蜡油会在页脚留下一枚小小的褐色月牙。
+          这些瑕疵不是错误的记录，而是一个人曾经在这里的物证。
+        </p>
+        <p>
+          修道院的缮写室通常朝北开窗，因为直射阳光会刺眼、会让颜料过早干燥。
+          整日的光都是平的、冷的、安静的。抄写员在这样的光里坐上十年，
+          把《福音书》抄了四遍，并且每一次都比上一次更相信其中的句子。
+        </p>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ---------- 圣物 ---------- -->
+  <article class="sheet reveal" id="relics">
+    <div class="sheet__frame">
+
+      <p class="rubric">Capitulum ii · Reliquiae</p>
+      <h2 class="chapter">圣物三件</h2>
+      <p class="chapter-lat">Tria quae in cella reposita sunt, sub sigillo.</p>
+
+      <p class="relic-guide">左右滑动，阅览三件圣物；也可聚焦下方卡片区域后使用方向键。</p>
+      <div class="relics" tabindex="0" aria-label="圣物画廊，可横向滚动">
+
+        <section class="relic">
+          <div class="relic__inner">
+            <div class="relic__photo">
+              <img src="assets/img/card-knight.jpg" alt="中世纪铠甲与纹章盾牌细部" loading="lazy">
+            </div>
+            <div class="relic__body">
+              <span class="relic__num">I</span>
+              <h3>骑士法则</h3>
+              <span class="lat">Militia Templi</span>
+              <p>誓言、佩剑与荣誉。在苍茫荒野守护纯粹的信仰，追寻那只从未被找到的圣杯。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="relic">
+          <div class="relic__inner">
+            <div class="relic__photo">
+              <img src="assets/img/card-codex.jpg" alt="泥金装饰的拉丁文手抄本内页细部" loading="lazy">
+            </div>
+            <div class="relic__body">
+              <span class="relic__num">II</span>
+              <h3>秘传羊皮书</h3>
+              <span class="lat">Codex Occultus</span>
+              <p>以草本植物萃取的金粉写就，记录着失落的星相学与古代炼金术的残卷孤本。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="relic">
+          <div class="relic__inner">
+            <div class="relic__photo">
+              <img src="assets/img/card-vault.jpg" alt="古老修道院彩绘木门" loading="lazy">
+            </div>
+            <div class="relic__body">
+              <span class="relic__num">III</span>
+              <h3>修院圣窖</h3>
+              <span class="lat">Cellarium</span>
+              <p>封存千年的地窖，藏着古法酿造的草药烈酒、羊皮封缄的契约，以及三把遗失的钥匙。</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </article>
+
+  <!-- ---------- 纪年 ---------- -->
+  <article class="sheet reveal" id="chronicle">
+    <div class="sheet__frame">
+
+      <p class="rubric">Liber iii · Chronica</p>
+      <h2 class="chapter">纪年·手抄本的黄昏</h2>
+      <p class="chapter-lat">Quomodo scriptura manu facta occiderit et surrexerit.</p>
+
+      <ol class="chronicle">
+        <li>
+          <span class="yr">A.D. 476</span>
+          <strong>西罗马倾覆。</strong>
+          <p>旧帝国的抄本随流亡者一起进入高卢与爱尔兰的修道院。文明在羊皮纸上续命。</p>
+        </li>
+        <li>
+          <span class="yr">A.D. 800</span>
+          <strong>加洛林复兴。</strong>
+          <p>阿尔昆整理出加洛林小写体，字母第一次有了统一的呼吸节奏，为后世西文书法立下骨架。</p>
+        </li>
+        <li>
+          <span class="yr">A.D. 1147</span>
+          <strong>泥金臻于极盛。</strong>
+          <p>西多会与克吕尼的缮写室各自成派。金箔、朱砂、天青石与紫染，把一页《圣经》变成一件珠宝。</p>
+        </li>
+        <li>
+          <span class="yr">A.D. 1254</span>
+          <strong>《黄金古卷》成书。</strong>
+          <p>据题记，此卷由莱茵河畔一座无名缮写室完成，历七年，用金箔一百三十七张。</p>
+        </li>
+        <li>
+          <span class="yr">A.D. 1450</span>
+          <strong>活字降临。</strong>
+          <p>古腾堡让文字可以被复制，也让手抄本从此成为艺术品——一颗星球上最后的、独一份的光。</p>
+        </li>
+      </ol>
+
+      <div class="verse">
+        <span class="lat">«Veritas vos liberabit.»</span>
+        <span class="zh">真理必叫你们得以自由。— Ioann. 8:32</span>
+      </div>
+
+    </div>
+  </article>
+
+<!-- ============ 书末题记 ============ -->
+  <article class="sheet reveal" id="colophon">
+    <div class="sheet__frame">
+      <div class="colophon">
+
+        <div class="colophon-main">
+          <p class="rubric">Explicit · Colophon</p>
+          <h2 class="chapter">书末题记</h2>
+          <p class="chapter-lat">Quis, quando, unde, quomodo.</p>
+
+          <p>
+            本卷以 HTML 与 CSS 写就，未借任何框架之力。金箔以真实旧金箔拓印取样，
+            羊皮纸取自真实的斑驳纸本，哥特黑体经文与拉丁泥金内页皆来自实拍影像；
+            字体为 Cinzel Decorative（雕版罗马）、EB Garamond 与 Cormorant Garamond（衬线）
+            及 MedievalSharp（手抄笔意），均按 OFL 开源协议本地内嵌，断网亦可呈现。
+          </p>
+
+          <ul class="spec">
+            <li><b>版式</b><span>哥特尖拱卡片（CSS mask 绘制）、双线古典边框、四角茛苕饰花</span></li>
+            <li><b>首字</b><span>泥金首字下沉（Illuminated Drop Cap）：青金石蓝底、金箔字母、金红茛苕卷草</span></li>
+            <li><b>音律</b><span>无音频文件：由 Web Audio API 实时合成的多利亚调式圣咏与教堂混响</span></li>
+            <li><b>图像</b><span>Pexels 免费授权影像（羊皮纸 · 旧金箔 · 泥金手抄本 · 铠甲 · 古木门）</span></li>
+            <li><b>字体</b><span>Cinzel Decorative · EB Garamond · Cormorant Garamond · MedievalSharp</span></li>
+            <li><b>离线</b><span>全部素材已本地化，双击 index.html 即可浏览，无需联网</span></li>
+          </ul>
+        </div>
+
+        <div class="seal-wrap">
+          <div class="seal-block">
+            <span class="seal-ghost" id="sealGhost" aria-hidden="true"></span>
+            <button class="seal" id="seal" title="点击烙下印章" aria-label="烙下火漆印章">
+              <span class="seal__wax"></span>
+              <span class="seal__mark">CA</span>
+            </button>
+            <p class="seal-hint">Sigillum appone</p>
+          </div>
+        </div>
+
+      </div>
+      <section class="band" aria-label="缮写室">
+        <div class="band__inner">
+          <blockquote>“我只请求一件事：当我在这一页上落下最后一笔时，愿读它的人，仍能听见笔尖划过羊皮纸的那种声音。”</blockquote>
+          <cite>— Scriptorium, saec. XIII</cite>
+        </div>
+      </section>
+      <section class="shelf" aria-label="藏卷之架">
+        <div class="shelf__cap">Hic codex quiescit · 此卷安放于此</div>
+      </section>
+    </div>
+  </article>
+  <div class="reader-controls" id="readerControls" hidden>
+    <button class="folio-btn" id="prevChapter" type="button">上一章</button>
+    <span class="folio-count" id="folioCount"></span>
+    <button class="folio-btn" id="nextChapter" type="button">下一章</button>
+  </div>
+  <span class="sr-only" id="chapterStatus" role="status" aria-live="polite"></span>
+</main>
+
+<footer class="foot">
+  <span class="xi">✠</span>
+  Codex Aureus · 黄金古卷<br>
+  Transcriptum manu et machina · 二〇二六年
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==========================================================================
+   Codex Aureus — 交互脚本（无依赖）
+   1) 阅读进度   2) 出场动画   3) 火漆印章
+   4) 烛光模式   5) 程序合成圣咏氛围音（Web Audio）
+   ========================================================================== */
+(function () {
+  'use strict';
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- 1. 章节式阅读：渐进增强、历史记录、键盘导航 ---------- */
+  var reader = document.getElementById('reader');
+  var nav = reader.querySelector('.reader-nav');
+  var tabs = Array.from(nav.querySelectorAll('a'));
+  var panels = tabs.map(function (tab) { return document.querySelector(tab.getAttribute('href')); });
+  var labels = ['序章', '圣物', '纪年', '题记'];
+  var previous = document.getElementById('prevChapter');
+  var next = document.getElementById('nextChapter');
+  var counter = document.getElementById('folioCount');
+  var status = document.getElementById('chapterStatus');
+  var bar = document.getElementById('progress');
+  var motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var active = 0, turn = 0, animations = [], scrollFrame = 0;
+  nav.querySelector('ul').setAttribute('role', 'tablist');
+  nav.querySelector('ul').setAttribute('aria-label', '选择章节');
+  tabs.forEach(function (tab, i) {
+    tab.parentElement.setAttribute('role', 'presentation');
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-controls', panels[i].id);
+    panels[i].setAttribute('role', 'tabpanel');
+    panels[i].setAttribute('aria-labelledby', tab.id);
+    panels[i].setAttribute('tabindex', '0');
+  });
+  function fromHash() {
+    return panels.findIndex(function (panel) { return '#' + panel.id === location.hash; });
+  }
+  function progress() {
+    scrollFrame = 0;
+    var panel = panels[active], rect = panel.getBoundingClientRect();
+    var edge = nav.getBoundingClientRect().bottom + 12;
+    var available = window.innerHeight - edge;
+    var fraction = rect.height <= available ? 1 : Math.max(0, Math.min(1, (edge - rect.top) / (rect.height - available)));
+    bar.style.width = ((active + fraction) / panels.length * 100) + '%';
+  }
+  function sync(i) {
+    active = i;
+    panels.forEach(function (panel, n) { panel.hidden = n !== i; panel.classList.add('in'); });
+    tabs.forEach(function (tab, n) {
+      tab.setAttribute('aria-selected', String(n === i));
+      tab.tabIndex = n === i ? 0 : -1;
+    });
+    previous.disabled = i === 0;
+    next.disabled = i === panels.length - 1;
+    counter.textContent = '卷一 · ' + labels[i] + ' / ' + (i + 1) + ' — 4';
+    status.textContent = '已翻至' + labels[i] + '，第 ' + (i + 1) + ' 章，共 4 章';
+    progress();
+  }
+  function stopAnimations() {
+    animations.forEach(function (animation) { animation.cancel(); });
+    animations = [];
+  }
+  function animate(panel, frames, duration) {
+    if (motion.matches || !panel.animate) return Promise.resolve();
+    var animation = panel.animate(frames, {duration:duration, easing:'cubic-bezier(.22,.61,.36,1)'});
+    animations.push(animation);
+    return animation.finished.catch(function () {});
+  }
+  async function showChapter(i, options) {
+    options = options || {};
+    if (i < 0 || i >= panels.length) return;
+    var serial = ++turn;
+    stopAnimations();
+    var direction = i >= active ? 1 : -1;
+    if (i !== active) {
+      await animate(panels[active], [{opacity:1,transform:'translateX(0)'},{opacity:0,transform:'translateX(' + (-8 * direction) + 'px)'}], 100);
+      if (serial !== turn) return;
+    }
+    sync(i);
+    if (options.history && location.hash !== '#' + panels[i].id) {
+      try { history.pushState(null, '', '#' + panels[i].id); }
+      catch (e) { location.hash = panels[i].id; }
+    }
+    if (options.scroll) {
+      // 不对页面高度做逐帧动画；一次定位，避免长短章节切换时反复滚动。
+      var top = reader.getBoundingClientRect().top + window.scrollY - parseFloat(getComputedStyle(reader).getPropertyValue('--nav-top')) - 6;
+      window.scrollTo({top:Math.max(0, top), behavior:'instant'});
+    }
+    if (options.focus) panels[i].focus({preventScroll:true});
+    await animate(panels[i], [{opacity:0,transform:'translateX(' + (12 * direction) + 'px)'},{opacity:1,transform:'translateX(0)'}], 220);
+    if (serial === turn) { stopAnimations(); progress(); }
+  }
+  tabs.forEach(function (tab, i) {
+    tab.addEventListener('click', function (event) {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      showChapter(i, {history:true, scroll:true});
+    });
+    tab.addEventListener('keydown', function (event) {
+      var target;
+      if (event.key === 'ArrowRight') target = (i + 1) % tabs.length;
+      else if (event.key === 'ArrowLeft') target = (i + tabs.length - 1) % tabs.length;
+      else if (event.key === 'Home') target = 0;
+      else if (event.key === 'End') target = tabs.length - 1;
+      else if (event.key === ' ') target = i;
+      else return;
+      event.preventDefault();
+      tabs[target].focus({preventScroll:true});
+      showChapter(target, {history:true, scroll:true});
+    });
+  });
+  previous.addEventListener('click', function () { showChapter(active - 1, {history:true, scroll:true, focus:true}); });
+  next.addEventListener('click', function () { showChapter(active + 1, {history:true, scroll:true, focus:true}); });
+  window.addEventListener('hashchange', function () {
+    var i = fromHash();
+    showChapter(i < 0 ? 0 : i, {scroll:true});
+  });
+  motion.addEventListener('change', function () { if (motion.matches) stopAnimations(); });
+  window.addEventListener('scroll', function () {
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(progress);
+  }, {passive:true});
+  window.addEventListener('resize', progress);
+  var gallery = document.querySelector('.relics');
+  gallery.addEventListener('keydown', function (event) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    if (gallery.scrollWidth <= gallery.clientWidth) return;
+    event.preventDefault();
+    gallery.scrollBy({left:(event.key === 'ArrowRight' ? 1 : -1) * (gallery.querySelector('.relic').getBoundingClientRect().width + 16), behavior:motion.matches ? 'instant' : 'smooth'});
+  });
+  document.getElementById('readerControls').hidden = false;
+  sync(Math.max(0, fromHash()));
+  if (fromHash() >= 0) requestAnimationFrame(function () { showChapter(active, {scroll:true}); });
+
+  /* ---------- 3. 火漆印章 ---------- */
+  var toast = document.getElementById('toast'), toastTimer;
+  function say(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 3600);
+  }
+
+  var SEALS = [
+    '火漆之印已烙于古卷 —— Sigillum impressum est.',
+    '以十字之名，此誓约永不褪色。',
+    '「凡写下的，便成永恒。」— Quod scriptum est, manet.',
+    '羊皮纸轻微颤动，古老的祝福随之苏醒。',
+    '这一页现在只属于你了。Hic liber tuus est.',
+    '抄写员吹熄了蜡烛，把这一夜留在了背面。'
+  ];
+
+  var seal = document.getElementById('seal');
+  var ghost = document.getElementById('sealGhost');
+  seal.addEventListener('click', function () {
+    seal.classList.add('press');
+    setTimeout(function () { seal.classList.remove('press'); }, 190);
+
+    var r = seal.getBoundingClientRect();
+    var p = seal.parentElement.getBoundingClientRect();
+    ghost.style.left = (r.left - p.left + 8) + 'px';
+    ghost.style.top = (r.top - p.top + 8) + 'px';
+    ghost.classList.remove('show');
+    void ghost.offsetWidth;
+    ghost.classList.add('show');
+
+    say(SEALS[Math.floor(Math.random() * SEALS.length)]);
+  });
+
+  /* ---------- 4. 烛光模式 ---------- */
+  var btnCandle = document.getElementById('btnCandle');
+  btnCandle.addEventListener('click', function () {
+    var on = document.body.classList.toggle('candle');
+    btnCandle.classList.toggle('on', on);
+    btnCandle.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
+  /* ---------- 5. 程序合成圣咏（Web Audio API） ----------
+     完全无音频文件：振荡器 + 共振峰滤波 + 卷积混响实时合成。
+     多利亚调式（D E F G A Bb C）上的缓慢轮唱、奥尔加农五度并行，
+     以及三条持续低音（drone），模拟远处修院里的合唱。 */
+  var Chant = (function () {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ctx = null, master = null, wet = null, sched = null;
+    var drones = [], voices = [], running = false;
+
+    var ROOT = 73.416;                        // D2
+    var DORIAN = [0, 2, 3, 5, 7, 8, 10];      // 多利亚调式音级
+
+    function hz(semi) { return ROOT * Math.pow(2, semi / 12); }
+
+    /* 教堂脉冲响应：指数衰减噪声（含 12ms 前延迟） */
+    function impulse(sec, decay) {
+      var rate = ctx.sampleRate, len = Math.floor(rate * sec);
+      var buf = ctx.createBuffer(2, len, rate);
+      for (var c = 0; c < 2; c++) {
+        var d = buf.getChannelData(c);
+        for (var i = 0; i < len; i++) {
+          var t = i / len;
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, decay) *
+                 (1 - Math.exp(-i / (rate * 0.012)));
+        }
+      }
+      return buf;
+    }
+
+    /* 一个合唱声部：三角波基音 + 八度/五度泛音 → 双共振峰 + 低通 → 包络 */
+    function makeVoice(freq, when, dur, level, attack) {
+      var att = attack != null ? attack : Math.min(dur * 0.30, 2.6);
+      var rel = Math.max(1.1, Math.min(dur * 0.40, 4.2));
+      rel = Math.min(rel, dur - att - 0.05);
+      var end = when + dur;
+
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.00001, when);
+      g.gain.exponentialRampToValueAtTime(level, when + att);
+      g.gain.setValueAtTime(level, end - rel);
+      g.gain.exponentialRampToValueAtTime(0.00001, end);
+
+      var lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 2200;
+
+      var f1 = ctx.createBiquadFilter();
+      f1.type = 'bandpass'; f1.frequency.value = 430; f1.Q.value = 1.1;
+      var f2 = ctx.createBiquadFilter();
+      f2.type = 'bandpass'; f2.frequency.value = 900; f2.Q.value = 1.6;
+      var f3 = ctx.createBiquadFilter();
+      f3.type = 'peaking'; f3.frequency.value = 2500; f3.Q.value = 0.8; f3.gain.value = 5;
+
+      var oscs = [];
+      var parts = [
+        { t: 'triangle', f: freq,       a: 1.00, d: 0 },
+        { t: 'sine',     f: freq * 2,   a: 0.24, d: 3 },
+        { t: 'sine',     f: freq * 3,   a: 0.08, d: 0 },
+        { t: 'sine',     f: freq / 2,   a: 0.30, d: -4 }
+      ];
+      // 呼吸颤音：每个声部独立频率，避免机械感
+      var lfo = ctx.createOscillator(), lfoG = ctx.createGain();
+      lfo.frequency.value = 4.2 + Math.random() * 1.6;
+      lfoG.gain.value = freq * 0.0045;
+      lfo.connect(lfoG);
+
+      var mix = ctx.createGain(); mix.gain.value = 1;
+      parts.forEach(function (p) {
+        var o = ctx.createOscillator(), og = ctx.createGain();
+        o.type = p.t; o.frequency.value = p.f; o.detune.value = p.d;
+        og.gain.value = p.a;
+        lfoG.connect(o.detune);
+        o.connect(og); og.connect(mix);
+        o.start(when); o.stop(end + 0.3);
+        oscs.push(o);
+      });
+      lfo.start(when); lfo.stop(end + 0.3);
+
+      mix.connect(f1); mix.connect(f2); mix.connect(f3);
+      var sum = ctx.createGain(); sum.gain.value = 0.5;
+      f1.connect(sum); f2.connect(sum); f3.connect(sum);
+      sum.connect(lp); lp.connect(g);
+      g.connect(master); g.connect(wet);
+
+      var nodes = oscs.concat([lfo, mix, f1, f2, f3, sum, lp, g]);
+      voices.push({ end: end, nodes: nodes, g: g });
+      return nodes;
+    }
+
+    /* 清掉已经播完的声部，避免节点无限累积 */
+    function prune() {
+      var now = ctx.currentTime;
+      voices = voices.filter(function (v) {
+        if (v.end + 0.6 < now) {
+          v.nodes.forEach(function (n) { try { n.disconnect(); } catch (e) {} });
+          return false;
+        }
+        return true;
+      });
+    }
+
+    /* 三条持续低音：D1 / D2 / A2 */
+    function buildDrones() {
+      var now = ctx.currentTime;
+      [hz(-12), hz(0), hz(7)].forEach(function (f, i) {
+        var when = now + i * 0.9;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.00001, when);
+        g.gain.exponentialRampToValueAtTime(0.075 - i * 0.012, when + 5 + i);
+        var o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+        o1.type = 'sine'; o1.frequency.value = f; o1.detune.value = -3;
+        o2.type = 'triangle'; o2.frequency.value = f; o2.detune.value = 4;
+        var m = ctx.createGain(); m.gain.value = 0.5;
+        var lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 700;
+        o1.connect(m); o2.connect(m); m.connect(lp); lp.connect(g);
+        g.connect(master); g.connect(wet);
+        o1.start(when); o2.start(when);
+        drones.push({ oscs: [o1, o2], nodes: [m, lp, g] });
+      });
+    }
+
+    function killDrones() {
+      var now = ctx.currentTime;
+      drones.forEach(function (d) {
+        d.nodes.forEach(function (n) {
+          if (n.gain) {
+            try {
+              n.gain.cancelScheduledValues(now);
+              n.gain.setValueAtTime(Math.max(n.gain.value, 0.00001), now);
+              n.gain.exponentialRampToValueAtTime(0.00001, now + 0.5);
+            } catch (e) {}
+          }
+        });
+        d.oscs.forEach(function (o) { try { o.stop(now + 0.7); } catch (e) {} });
+      });
+      var old = drones; drones = [];
+      setTimeout(function () {
+        old.forEach(function (d) {
+          d.nodes.concat(d.oscs).forEach(function (n) {
+            try { n.disconnect(); } catch (e) {}
+          });
+        });
+      }, 900);
+    }
+
+    /* 缓慢推进的轮唱线条 */
+    function step() {
+      if (!running) return;
+      var t = ctx.currentTime + 0.06;
+      var deg = DORIAN[Math.floor(Math.random() * DORIAN.length)];
+      var oct = Math.random() < 0.62 ? 12 : 0;          // 主要在中音区
+      var dur = 5.0 + Math.random() * 3.6;
+      var lvl = 0.050 + Math.random() * 0.022;
+
+      makeVoice(hz(deg + oct), t, dur, lvl);
+
+      // 奥尔加农：偶发纯五度并行
+      if (Math.random() < 0.55) {
+        makeVoice(hz(deg + oct + 7), t + 0.35 + Math.random() * 0.5, dur * 0.92, lvl * 0.60);
+      }
+      // 偶尔在低八度加一条支撑线
+      if (Math.random() < 0.30) {
+        makeVoice(hz(deg + oct - 12), t + 0.2, dur * 1.15, lvl * 0.50);
+      }
+      prune();
+      sched = setTimeout(step, dur * 0.72 * 1000);
+    }
+
+    function start(done) {
+      if (!AC) { done('error', '当前浏览器不支持 Web Audio，无法生成圣咏。'); return; }
+      if (!ctx) {
+        ctx = new AC();
+        master = ctx.createGain(); master.gain.value = 0.00001;
+
+        var hp = ctx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 55;
+        var lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 3200;
+
+        var conv = ctx.createConvolver();
+        conv.buffer = impulse(4.8, 2.7);
+        wet = ctx.createGain(); wet.gain.value = 0.90;
+
+        master.connect(hp); hp.connect(lp);
+        lp.connect(ctx.destination);                       // 干声
+        lp.connect(conv); conv.connect(wet); wet.connect(ctx.destination);
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+
+      running = true;
+      var now = ctx.currentTime;
+      master.gain.cancelScheduledValues(now);
+      master.gain.setValueAtTime(Math.max(master.gain.value, 0.00001), now);
+      master.gain.exponentialRampToValueAtTime(0.28, now + 3.8);   // 约 4 秒淡入
+
+      buildDrones();
+      step();
+      done('on', '圣咏起 · 多利亚调式，缓慢轮唱与三条持续低音（浏览器实时合成）');
+    }
+
+    function stop(done) {
+      if (!ctx) { done('off', '圣咏止。'); return; }
+      running = false;
+      clearTimeout(sched);
+      var now = ctx.currentTime;
+      master.gain.cancelScheduledValues(now);
+      master.gain.setValueAtTime(Math.max(master.gain.value, 0.00001), now);
+      master.gain.exponentialRampToValueAtTime(0.00001, now + 1.4);  // 1.4 秒淡出
+      setTimeout(function () {
+        killDrones();
+        voices.forEach(function (v) {
+          v.nodes.forEach(function (n) { try { n.disconnect(); } catch (e) {} });
+        });
+        voices = [];
+        if (ctx.state === 'running') ctx.suspend();
+      }, 1500);
+      done('off', '圣咏止 · 烛火归于寂静。');
+    }
+
+    return {
+      toggle: function (done) { running ? stop(done) : start(done); }
+    };
+  })();
+
+  var btnChant = document.getElementById('btnChant');
+  btnChant.addEventListener('click', function () {
+    if (btnChant.disabled) return;
+    btnChant.disabled = true;
+    Chant.toggle(function (state, message) {
+      btnChant.disabled = false;
+      if (state === 'error') { say(message); return; }
+      var on = (state === 'on');
+      btnChant.classList.toggle('on', on);
+      btnChant.setAttribute('aria-pressed', on ? 'true' : 'false');
+      say(message);
+    });
+  });
+})();
+</script>
+</body>
+</html>
